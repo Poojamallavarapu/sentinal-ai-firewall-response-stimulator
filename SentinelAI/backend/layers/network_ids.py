@@ -3,6 +3,12 @@ import torch.nn as nn
 import psutil
 import time
 import os
+from sklearn.preprocessing import StandardScaler
+
+# 🔐 PyTorch 2.6+ SAFE LOADING FIX
+# We explicitly allow StandardScaler (trusted, self-trained)
+torch.serialization.add_safe_globals([StandardScaler])
+
 
 # ---------------- MODEL ----------------
 class NetworkIDSModel(nn.Module):
@@ -27,7 +33,12 @@ class NetworkIDSModel(nn.Module):
 # ---------------- IDS ----------------
 class NetworkIDS:
     def __init__(self, model_path):
-        checkpoint = torch.load(model_path, map_location="cpu")
+        # ✅ Safe + explicit load (PyTorch 2.6 compliant)
+        checkpoint = torch.load(
+            model_path,
+            map_location="cpu",
+            weights_only=False
+        )
 
         self.model = NetworkIDSModel(checkpoint["input_dim"])
         self.model.load_state_dict(checkpoint["model_state_dict"])
@@ -56,8 +67,8 @@ class NetworkIDS:
     def _vpn_or_foreign_suspected(self, traffic_volume):
         """
         Heuristic:
-        - Very high packet + byte count in short time
-        - Typical of VPNs / proxies / bot traffic
+        - Very high burst traffic
+        - Typical of VPNs, proxies, botnets
         """
         if traffic_volume > 150_000:
             return True
@@ -71,10 +82,10 @@ class NetworkIDS:
         # ---------------- LAYER 1 ----------------
         # Normal home / office user
         if traffic_volume < 10_000:
-            return 0.1  # SAFE → ALLOW
+            return 0.1   # SAFE → ALLOW
 
         # ---------------- LAYER 2 ----------------
-        # Cloud / Render / shared network traffic
+        # Cloud / Render / shared IP traffic
         if traffic_volume < 60_000:
             return 0.45  # WARNING (never block)
 
