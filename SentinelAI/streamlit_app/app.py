@@ -5,7 +5,7 @@ import os
 
 API_URL = os.getenv(
     "SENTINEL_API_URL",
-    "http://127.0.0.1:8000/analyze"
+    "https://sentinal-ai-firewall-response-stimulator.onrender.com"
 )
 
 st.set_page_config(
@@ -42,3 +42,4 @@ if net_result["decision"] == "ALLOW":
     st.success("✅ Network verified successfully.")
     st.info("➡️ Open **Prompt** page from the left sidebar.")
     st.stop()
+
